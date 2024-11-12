@@ -13,3 +13,4 @@ require "leanprover-community" / "mathlib"
 @[default_target]
 lean_lib «PizzaGameLean4» where
   -- add any library configuration options here
+  globs := #[.submodules `PizzaGameLean4]
