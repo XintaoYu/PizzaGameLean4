@@ -602,7 +602,7 @@ theorem Fin.cIcc_sdiff_endpoint_left {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIc
           rw [Nat.mod_eq_of_lt (by omega)]
           by_contra h₃
           push_neg at h₃
-          rw [Nat.lt_one_iff, ← Fin.val_zero n, Fin.val_inj, sub_eq_zero] at h₃
+          rw [Nat.lt_one_iff, ← Fin.val_zero (n + 1), Fin.val_inj, sub_eq_zero] at h₃
           exact h h₃.symm
       rw [← sub_sub, Fin.coe_sub_iff_le.mpr h₁, Fin.val_one'']
       if h₂ : n = 0 then
@@ -630,7 +630,7 @@ theorem Fin.cIcc_sdiff_endpoint_left {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIc
       else
         rw [h₁] at mem
         have mem' : a ∈ Fin.cIcc b (a + 1) := by
-          nth_rw 1 [← add_sub_cancel_right a 1]
+          nth_rw 2 [← add_sub_cancel_right a 1]
           exact sub_one_mem_cIcc b h₂
         refine Or.elim (Fin.mem_cIcc_antisymm.mp ⟨mem, mem'⟩) ?_ ?_ <;> intro h₂
         · nth_rw 1 [← add_zero a] at h₂
@@ -657,7 +657,7 @@ theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cI
           rw [Nat.mod_eq_of_lt (by omega)]
           by_contra h₃
           push_neg at h₃
-          rw [Nat.lt_one_iff, ← Fin.val_zero n, Fin.val_inj, sub_eq_zero] at h₃
+          rw [Nat.lt_one_iff, ← Fin.val_zero (n + 1), Fin.val_inj, sub_eq_zero] at h₃
           exact h h₃.symm
       rw [sub_sub, add_comm 1 a, ← sub_sub, Fin.coe_sub_iff_le.mpr h₁, Fin.val_one'']
       replace le₂ := lt_of_le_of_ne le₂ (by
@@ -678,7 +678,7 @@ theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cI
       else
         rw [h₁] at mem
         have mem' : b ∈ Fin.cIcc (b - 1) a := by
-          nth_rw 1 [← sub_add_cancel b 1]
+          nth_rw 2 [← sub_add_cancel b 1]
           exact add_one_mem_cIcc a (by tauto)
         refine Or.elim (Fin.mem_cIcc_antisymm.mp ⟨mem, mem'⟩) ?_ ?_ <;> intro h₂
         · exact h h₂.symm
@@ -735,15 +735,16 @@ variable (n : ℕ)
 
 /- A term `cut : cuts n` for some positive integer `n` represents a cut that divides the pizza into `n + 1`-pieces. indexed from `0`. For each piece `i`, `cut i` is the area of that piece. -/
 def cuts :=
-  {f : Fin (n + 1) → ℝ // (∀ i : Fin (n + 1), f i ≥ 0) ∧ ∑ i : Fin n, f i = 1}
+  {f : Fin (n + 1) → ℝ // (∀ i : Fin (n + 1), f i ≥ 0) ∧ ∑ i : Fin (n + 1), f i = 1}
 
 /- A term `turn : turns n` for some positive integer `n` describes the process of the game. For round `i`, `turn i` is the NO. of the chosen pizza in this round. -/
 def turns :=
   {f : Fin (n + 1) → Fin (n + 1) // Function.Injective f}
 
 /- A term `strategy : strategies n` represents the strategy we choose. More specifically, for some cut of pizza `cut : cuts n` and some game process `turn : turns n`, `strategy cut turn` is the constraints we require for `turn`, such that we make it the best strategy. -/
+/- **Note!! This definition might be wrong.** -/
 def strategies :=
-  cuts n → turns n → Prop
+  cuts n → turns n → Fin (n + 1) → Prop
 
 end
 
@@ -891,7 +892,7 @@ structure games (n : ℕ) where
   turn : turns n
   strategy : strategies n
   legality : basic_rule turn
-  good_turn : strategy cut turn
+  good_turn : ∀ i, strategy cut turn i
 
 section
 
@@ -903,6 +904,44 @@ def games.result (game : games n) : ℝ :=
 
 def games_with_strategy (strategy : strategies n) :=
   {g : games n // g.strategy = strategy}
+
+def alice's_pieces (game : games n) : Finset (Fin (n + 1)) :=
+  {x | ∃ i : Fin (n + 1), Even i.val ∧ game.turn.val i = x}.toFinset
+
+def bob's_pieces (game : games n) : Finset (Fin (n + 1)) :=
+  {x | ∃ i : Fin (n + 1), Odd i.val ∧ game.turn.val i = x}.toFinset
+
+theorem alice's_pieces_def {game : games n} : alice's_pieces game = {x | ∃ i : Fin (n + 1), Even i.val ∧ game.turn.val i = x}.toFinset := rfl
+
+theorem bob's_pieces_def {game : games n} : bob's_pieces game = {x | ∃ i : Fin (n + 1), Odd i.val ∧ game.turn.val i = x}.toFinset := rfl
+
+theorem alice's_pieces_eq_univ_sdiff_bob's_pieces {game : games n} : alice's_pieces game = Finset.univ \ bob's_pieces game := by
+  rw [alice's_pieces_def, bob's_pieces_def]
+  ext x
+  rw [Finset.mem_sdiff]
+  repeat rw [Set.mem_toFinset, Set.mem_setOf]
+  constructor <;> intro mem
+  · rcases mem with ⟨i, even, h⟩
+    exact ⟨Finset.mem_univ _, by
+      intro mem'
+      rcases mem' with ⟨j, odd, h'⟩
+      rw [← h'] at h
+      apply game.turn.property at h
+      rw [h] at even
+      exact Nat.not_even_iff_odd.mpr odd <| even⟩
+  · replace mem := mem.right
+    push_neg at mem
+    by_contra mem'
+    push_neg at mem'
+    have h : ∀ i : Fin (n + 1), game.turn.val i ≠ x := by
+      intro i
+      by_cases h₁ : Even i.val
+      · exact mem' i h₁
+      · exact mem i <| Nat.not_even_iff_odd.mp h₁
+    have h' : Function.Surjective game.turn.val := by
+      exact Finite.surjective_of_injective game.turn.property
+    rcases h' x with ⟨i, eq⟩
+    exact h i eq
 
 end
 
@@ -1031,7 +1070,7 @@ theorem taken_pieces_eq_cIcc (game : games n) : ∀ i, ∃ a b, taken_pieces gam
             · rw [mem']
               exact Fin.right_mem_cIcc
             · exact Fin.cIcc_subset_left (by
-                nth_rw 1 [show b = b + 1 - 1 from (add_sub_cancel_right _ _).symm]
+                nth_rw 2 [show b = b + 1 - 1 from (add_sub_cancel_right _ _).symm]
                 exact Fin.sub_one_mem_cIcc a h₃.symm) <| mem'
           · if h₅ : x = b + 1 then
               exact Or.inl h₅
@@ -1052,7 +1091,7 @@ theorem taken_pieces_eq_cIcc (game : games n) : ∀ i, ∃ a b, taken_pieces gam
             · rw [mem']
               exact Fin.left_mem_cIcc
             · exact Fin.cIcc_subset_right (by
-                nth_rw 1 [show a = a - 1 + 1 from (sub_add_cancel a 1).symm]
+                nth_rw 2 [show a = a - 1 + 1 from (sub_add_cancel a 1).symm]
                 exact Fin.add_one_mem_cIcc b h₃) <| mem'
           · if h₅ : x = a - 1 then
               exact Or.inl h₅
@@ -1110,8 +1149,15 @@ theorem mem_green_pieces₀ {a b : Fin (n + 1)} (x : Fin (n + 1)) : x ∈ green_
   simp only [green_pieces₀]
   rw [Set.mem_toFinset, Set.mem_setOf]
 
-theorem red_pieces_eq_univ_sdiff_green_pieces {a b : Fin (n + 1)} : red_pieces a b = Finset.univ \ green_pieces a b := by
-  admit
+theorem red_pieces_eq_cIcc_sdiff_green_pieces {a b : Fin (n + 1)} : red_pieces a b = Fin.cIcc a b \ green_pieces a b := by
+  ext x
+  rw [mem_red_pieces, Finset.mem_sdiff, mem_green_pieces]
+  constructor <;> intro mem
+  · rw [not_and_or]
+    exact ⟨mem.left, Or.inr <| Nat.not_odd_iff_even.mpr mem.right⟩
+  · exact ⟨mem.left, by
+      push_neg at mem
+      exact Nat.not_odd_iff_even.mp <| mem.right mem.left⟩
 
 theorem red_pieces_same_of_odd_length {a b : Fin (n + 1)} (h : Odd ((b - a).val + 1)) : red_pieces a b = red_pieces₀ a b := by
   ext x
@@ -1119,28 +1165,87 @@ theorem red_pieces_same_of_odd_length {a b : Fin (n + 1)} (h : Odd ((b - a).val 
   constructor <;> intro ⟨h₁, h₂⟩
   · exact ⟨h₁, by
       by_contra h₃
-      rw [← Nat.odd_iff_not_even] at h₃
-      exact Nat.odd_iff_not_even.mp h <| Odd.add_odd (h₁ ▸ Even.add_odd h₂ h₃) odd_one⟩
+      rw [Nat.not_even_iff_odd] at h₃
+      exact Nat.not_even_iff_odd.mpr h <| Odd.add_odd (h₁ ▸ Even.add_odd h₂ h₃) odd_one⟩
   · exact ⟨h₁, by
       by_contra h₃
-      rw [← Nat.odd_iff_not_even] at h₃
-      exact Nat.odd_iff_not_even.mp h <| Odd.add_odd (h₁ ▸ Odd.add_even h₃ h₂) odd_one⟩
+      rw [Nat.not_even_iff_odd] at h₃
+      exact Nat.not_even_iff_odd.mpr h <| Odd.add_odd (h₁ ▸ Odd.add_even h₃ h₂) odd_one⟩
 
 theorem red_pieces_eq_green_pieces₀_of_even_length {a b : Fin (n + 1)} (h : Even ((b - a).val + 1)) : red_pieces a b = green_pieces₀ a b := by
-  admit
+  ext x
+  rw [mem_red_pieces, mem_green_pieces₀]
+  constructor <;> intro mem
+  · exact ⟨mem.left, by
+      have h₁ := (Fin.val_sub_add_eq_iff_mem_cIcc _).mpr mem.left
+      by_contra h₂
+      apply Nat.not_odd_iff_even.mp at h₂
+      replace h₂ := h₁ ▸ Even.add mem.right h₂
+      exact Nat.even_add_one.mp h h₂⟩
+  · exact ⟨mem.left, by
+      have h₁ := (Fin.val_sub_add_eq_iff_mem_cIcc _).mpr mem.left
+      by_contra h₂
+      apply Nat.not_even_iff_odd.mp at h₂
+      replace h₂ := h₁ ▸ Odd.add_odd h₂ mem.right
+      exact Nat.even_add_one.mp h h₂⟩
 
 theorem green_pieces_eq_red_pieces₀_of_even_length {a b : Fin (n + 1)} (h : Even ((b - a).val + 1)) : green_pieces a b = red_pieces₀ a b := by
-  admit
+  ext x
+  rw [mem_green_pieces, mem_red_pieces₀]
+  constructor <;> intro mem
+  · exact ⟨mem.left, by
+      have h₁ := (Fin.val_sub_add_eq_iff_mem_cIcc _).mpr mem.left
+      by_contra h₂
+      apply Nat.not_even_iff_odd.mp at h₂
+      replace h₂ := h₁ ▸ Odd.add_odd mem.right h₂
+      exact Nat.even_add_one.mp h h₂⟩
+  · exact ⟨mem.left, by
+      have h₁ := (Fin.val_sub_add_eq_iff_mem_cIcc _).mpr mem.left
+      by_contra h₂
+      apply Nat.not_odd_iff_even.mp at h₂
+      replace h₂ := h₁ ▸ Even.add h₂ mem.right
+      exact Nat.even_add_one.mp h h₂⟩
+
+
 
 end
 
-def even_case_strategy (n : ℕ) (h : Even (n + 1)) : strategies n :=
-  fun c f =>
-    if ∑ i with Odd i.val, c.val i ≥ ∑ i with Even i.val, c.val i then
-      ∀ i : Fin n, Even i.val → f.val i =
-      sorry
-    else
-      sorry
+section
 
-theorem even_case (n : ℕ) (h : Even (n + 1)) : ∀ game : games_with_strategy (even_case_strategy n h), game.val.result ≥ (1 : ℝ) / 2 :=
-  sorry
+variable {n : ℕ} [NeZero n]
+
+def even_case_strategy (_ : Even (n + 1)) : strategies n :=
+  fun cut turn i =>
+    if Even i.val then
+      if ∑ i with Even i.val, cut.val i ≥ ∑ i with Odd i.val, cut.val i then
+        Even (turn.val i).val
+      else
+        Odd (turn.val i).val
+    else
+      True
+
+theorem even_case₀ (h : Even (n + 1)) : Nonempty (games_with_strategy (even_case_strategy h)) ∧ ∀ game : games_with_strategy (even_case_strategy h), game.val.result ≥ (1 : ℝ) / 2 := by
+  constructor
+  · refine Nonempty.intro ?_
+    let sample_game : games n := {
+      cut := ⟨fun i => (1 : ℝ) / (n + 1), by
+        constructor
+        · intro i
+          positivity
+        · show ∑ _, (1 : ℝ) / (n + 1) = 1
+          rw [Finset.sum_const, Finset.card_fin]
+          field_simp⟩
+      turn := ⟨fun i => i, fun _ _ eq => eq⟩
+      strategy := even_case_strategy h
+      legality := by
+        rw [legal_turn]
+        intro i pos
+        show i ∈ _
+
+        admit
+      good_turn := sorry
+    }
+    admit
+  · admit
+
+end
