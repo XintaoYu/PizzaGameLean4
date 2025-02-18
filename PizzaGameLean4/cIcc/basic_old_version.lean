@@ -1,12 +1,11 @@
 import Mathlib.Tactic
 
+open Classical
+
 section basic
 
 variable {n : ℕ}
 
-/--
-Circular order on `Fin (n + 1)`.
--/
 instance Fin.instCircularOrder : CircularOrder (Fin (n + 1)) := {
   btw := fun a b c =>
     if a < c then
@@ -161,25 +160,12 @@ instance Fin.instCircularOrder : CircularOrder (Fin (n + 1)) := {
       exact Or.inl trivial
 }
 
-/--
-Auxilary instance: show that `btw` is `Decidable`.
--/
-instance __aux_btw_decidable (a b : Fin (n + 1)) : DecidablePred (fun x => btw a x b) := fun x => by
-  simp [btw]
-  exact inferInstance
-
-/--
-Circular left-closed right-closed interval `[a -> b]` on `Fin (n + 1)`: if `a = b`, the interval is defined to be the single point `a`(or `b`); otherwise, this interval includes `a`, and all the numbers obtained by starting from `a` and successively adding `1` until reaching `b`.
--/
-def Fin.cIcc (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
+noncomputable def Fin.cIcc (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
   if a = b then
     {a}
   else
     {x | btw a x b}.toFinset
 
-/--
-Left endpoint belongs to the `cIcc`.
--/
 theorem Fin.left_mem_cIcc {a b : Fin (n + 1)} : a ∈ Fin.cIcc a b := by
   simp only [Fin.cIcc]
   if h : a = b then
@@ -188,9 +174,6 @@ theorem Fin.left_mem_cIcc {a b : Fin (n + 1)} : a ∈ Fin.cIcc a b := by
     rw [if_neg h, Set.mem_toFinset, Set.mem_setOf]
     exact btw_rfl_left
 
-/--
-Right endpoint belongs to the `cIcc`.
--/
 theorem Fin.right_mem_cIcc {a b : Fin (n + 1)} : b ∈ Fin.cIcc a b := by
   simp only [Fin.cIcc]
   if h : a = b then
@@ -199,39 +182,24 @@ theorem Fin.right_mem_cIcc {a b : Fin (n + 1)} : b ∈ Fin.cIcc a b := by
     rw [if_neg h, Set.mem_toFinset, Set.mem_setOf]
     exact btw_refl_right _ _
 
-/--
-If endpoints of `cIcc` are not equal, then `x ∈ cIcc a b ↔ btw a x b`.
--/
 theorem Fin.mem_cIcc_of_ne {a b : Fin (n + 1)} (h : a ≠ b) (x : Fin (n + 1)) : x ∈ Fin.cIcc a b ↔ btw a x b := by
   simp only [Fin.cIcc]
   rw [if_neg h, Set.mem_toFinset]
   exact Set.mem_setOf
 
-/--
-If endpoints of `cIcc` are equal, then `x ∈ cIcc a a ↔ x = a`.
--/
 theorem Fin.mem_cIcc_self {a : Fin (n + 1)} (x : Fin (n + 1)) : x ∈ Fin.cIcc a a ↔ x = a := by
   simp only [Fin.cIcc, if_pos]
   exact Finset.mem_singleton
 
-/--
-`cIcc a a` only contains the single point `a`, i.e. `cIcc a a = {a}`.
--/
 theorem Fin.cIcc_self {a : Fin (n + 1)} : Fin.cIcc a a = {a} := by
   ext x
   rw [Finset.mem_singleton]
   exact Fin.mem_cIcc_self _
 
-/--
-If endpoints of `cIcc` are not equal, then the two `cIcc`s obtained by swapping endpoints cover the whole `Fin (n + 1)`.
--/
 theorem Fin.mem_cIcc_or {a b : Fin (n + 1)} (h : a ≠ b) (x : Fin (n + 1)) : x ∈ Fin.cIcc a b ∨ x ∈ Fin.cIcc b a := by
   rw [Fin.mem_cIcc_of_ne h, Fin.mem_cIcc_of_ne h.symm]
   exact btw_total _ _ _
 
-/--
-Intersection of the two `cIcc`s obtained by swapping endpoints only contains the endpoints.
--/
 theorem Fin.mem_cIcc_antisymm {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.cIcc a b ∧ x ∈ Fin.cIcc b a ↔ x = a ∨ x = b := by
   constructor <;> intro h
   · rcases h with ⟨mem₁, mem₂⟩
@@ -255,9 +223,6 @@ theorem Fin.mem_cIcc_antisymm {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.
     · rw [h₁]
       exact ⟨Fin.right_mem_cIcc, Fin.left_mem_cIcc⟩
 
-/--
-If the `cIcc` contains more than one element, then the "previous" (under the circular order) element of the right endpoint belongs to that `cIcc`.
--/
 theorem Fin.sub_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a - 1 ∈ Fin.cIcc b a := by
   intro b ne
   if h₁ : b < a then
@@ -301,9 +266,6 @@ theorem Fin.sub_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a - 1 ∈ Fi
   else
     omega
 
-/--
-If the `cIcc` contains more than one element, then the "next" (under the circular order) element of the left endpoint belongs to that `cIcc`.
--/
 theorem Fin.add_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a + 1 ∈ Fin.cIcc a b := by
   intro b ne
   rw [Fin.mem_cIcc_of_ne ne]
@@ -334,9 +296,6 @@ theorem Fin.add_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a + 1 ∈ Fi
     rw [if_neg h₁, if_neg h₂]
     exact trivial
 
-/--
-If the sum of distances from point `x` to the two endpoints equals the length of the `cIcc`, then `x` belongs to that `cIcc`.
--/
 theorem Fin.val_sub_add_eq_iff_mem_cIcc {a b : Fin (n + 1)} (x : Fin (n + 1)) : (x - a).val + (b - x).val = (b - a).val ↔ x ∈ Fin.cIcc a b := by
   if h₁ : a < b then
     rw [Fin.mem_cIcc_of_ne (ne_of_lt h₁), Fin.coe_sub_iff_le.mpr (le_of_lt h₁)]
@@ -395,9 +354,6 @@ theorem Fin.val_sub_add_eq_iff_mem_cIcc {a b : Fin (n + 1)} (x : Fin (n + 1)) : 
       rw [add_zero]
       exact ⟨fun _ => rfl, fun _ => rfl⟩
 
-/--
-Suppose `a` and `b` are two distinct points, `x` is between `a` and `b` (by the circular order), if and only if, the distance between `x` and `a` is no more than which between `b` and `a`.
--/
 theorem Fin.val_sub_le_iff_btw {a x b : Fin (n + 1)} (ne : a ≠ b) : btw a x b ↔ (x - a).val ≤ (b - a).val := by
   simp only [btw]
   constructor <;> intro h
@@ -441,35 +397,10 @@ theorem Fin.val_sub_le_iff_btw {a x b : Fin (n + 1)} (ne : a ≠ b) : btw a x b 
       rw [if_neg h₁, if_neg h₂]
       exact trivial
 
-/--
-Auxilary instance: for a fixed point `a` and a point `x`, the proposition `∃ m, 0 ≤ m ∧ m ≤ length ∧ x = a + m` is `Decidabale`.
--/
-instance __aux_continuous_segment_decidable (a : Fin (n + 1)) (length : ℕ) : DecidablePred (fun x => ∃ m, 0 ≤ m ∧ m ≤ length ∧ x = a + m) := fun x => by
-  if h : (x - a).val ≤ length then
-    refine .isTrue ?_
-    exists (x - a).val
-    constructor
-    · exact Nat.zero_le _
-    constructor
-    · exact h
-    · rw [← sub_eq_iff_eq_add', ← Fin.val_inj, Fin.val_natCast, Nat.mod_eq_of_lt (x - a).isLt]
-  else
-    refine .isFalse ?_
-    rintro ⟨m, zero_le, le_length, eq_add⟩
-    rw [eq_add, add_sub_cancel_left, Fin.val_natCast] at h
-    linarith [Nat.mod_le m (n + 1)]
-
-
-/-! `length + 1` is the real length, maybe we will modify the definition here later. -/
-/--
-The `Finset` containing `a` and the numbers obtained by starting from `a` and successively adding `1` until reaching `a + m`.
--/
-def Fin.continuous_segment (a : Fin (n + 1)) (length : ℕ) : Finset (Fin (n + 1)) :=
+/- `length + 1` is the real length, maybe we will modify the definition here later. -/
+noncomputable def Fin.continuous_segment (a : Fin (n + 1)) (length : ℕ) : Finset (Fin (n + 1)) :=
   {x | ∃ m, 0 ≤ m ∧ m ≤ length ∧ x = a + m}.toFinset
 
-/--
-`cIcc a b` is the same as the continuous segment starting from `a` with length `(b - a).val`.
--/
 theorem Fin.cIcc_eq_continuous_segment {a b : Fin (n + 1)} : Fin.cIcc a b = Fin.continuous_segment a (b - a).val := by
   simp only [Fin.cIcc, Fin.continuous_segment]
   ext x
@@ -499,17 +430,11 @@ theorem Fin.cIcc_eq_continuous_segment {a b : Fin (n + 1)} : Fin.cIcc a b = Fin.
       rw [Nat.mod_eq_of_lt (lt_of_le_of_lt le₂ (b - a).isLt)]
       exact le₂
 
-/--
-Given a continuous segment starting from `a` with length `length`, `x` belongs to the segment, if and only if, `x` can be expressed as the form of `a + n`, where `n` is a nonnegative number no more than `length`.
--/
 theorem Fin.mem_continuous_segment {a : Fin (n + 1)} {length : ℕ} (x : Fin (n + 1)) : x ∈ a.continuous_segment length ↔ ∃ n, 0 ≤ n ∧ n ≤ length ∧ x = a + n := by
   simp only [Fin.continuous_segment]
   rw [Set.mem_toFinset]
   exact Set.mem_setOf
 
-/--
-Cardinality of `cIcc a b` is `(b - a).val + 1`.
--/
 theorem Fin.cIcc_card_eq {a b : Fin (n + 1)} : (Fin.cIcc a b).card = (b - a).val + 1 := by
   rw [Fin.cIcc_eq_continuous_segment]
   let f : (i : ℕ) → i < (b - a).val + 1 → Fin (n + 1) :=
@@ -534,9 +459,6 @@ theorem Fin.cIcc_card_eq {a b : Fin (n + 1)} : (Fin.cIcc a b).card = (b - a).val
     · exact Nat.mod_eq_of_lt lt₁
     · exact Nat.mod_eq_of_lt lt₂
 
-/--
-`cIcc a b` equals `univ`, if and only if, `a = b + 1`.
--/
 theorem Fin.cIcc_eq_univ {a b : Fin (n + 1)} : Fin.cIcc a b = Finset.univ ↔ a = b + 1 := by
   constructor <;> intro h
   · if h₁ : a = b then
@@ -591,9 +513,6 @@ theorem Fin.cIcc_eq_univ {a b : Fin (n + 1)} : Fin.cIcc a b = Finset.univ ↔ a 
       rw [Nat.mod_eq_of_lt lt]
       omega
 
-/--
-`cIcc a a` (formed by a single point `a`) equal to `univ` only happens in `Fin 1`.
--/
 theorem Fin.cIcc_self_eq_univ_iff_fin_one {a : Fin (n + 1)} : Fin.cIcc a a = Finset.univ ↔ n = 0 := by
   constructor <;> intro h
   · rw [Fin.cIcc_eq_univ] at h
@@ -608,17 +527,11 @@ theorem Fin.cIcc_self_eq_univ_iff_fin_one {a : Fin (n + 1)} : Fin.cIcc a a = Fin
     · rw [Finset.mem_singleton]
       omega
 
-/--
-Every `cIcc` equals `univ` in `Fin 1`.
--/
 theorem Fin.cIcc_eq_univ_of_fin_one {a b : Fin (n + 1)} (h : n = 0) : Fin.cIcc a b = Finset.univ := by
   subst h
   rw [Fin.cIcc_eq_univ]
   omega
 
-/--
-For any number `x` in `cIcc a b`, `cIcc x b` lies within `cIcc a b`.
--/
 theorem Fin.cIcc_subset_right {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.cIcc a b → Fin.cIcc x b ⊆ Fin.cIcc a b := by
   intro mem₁ y mem₂
   if h₁ : a = b then
@@ -647,9 +560,6 @@ theorem Fin.cIcc_subset_right {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.
       repeat rw [Fin.val_natCast]
       rw [Nat.mod_eq_of_lt (lt_of_le_of_lt le₁₂ (b - a).isLt), Nat.mod_eq_of_lt (lt_of_le_of_lt le₂₂ (b - x).isLt)]
 
-/--
-For any number `x` in `cIcc a b`, `cIcc a x` lies within `cIcc a b`.
--/
 theorem Fin.cIcc_subset_left {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.cIcc a b → Fin.cIcc a x ⊆ Fin.cIcc a b := by
   intro mem₁ y mem₂
   if h₁ : a = b then
@@ -673,9 +583,6 @@ theorem Fin.cIcc_subset_left {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.c
       omega
     · exact eq₂
 
-/--
-If `cIcc a b` contains more than one point (i.e. `a ≠ b`), then the `Finset` obtained by deleting the left endpoint of `cIcc a b` is `cIcc (a + 1) b`.
--/
 theorem Fin.cIcc_sdiff_endpoint_left {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIcc a b \ {a} = Fin.cIcc (a + 1) b := by
   ext x
   rw [Finset.mem_sdiff, Finset.mem_singleton]
@@ -731,9 +638,6 @@ theorem Fin.cIcc_sdiff_endpoint_left {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIc
           omega
         · exact h h₂⟩
 
-/--
-If `cIcc a b` contains more than one point (i.e. `a ≠ b`), then the `Finset` obtained by deleting the right endpoint of `cIcc a b` is `cIcc a (b - 1)`.
--/
 theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIcc a b \ {b} = Fin.cIcc a (b - 1) := by
   ext x
   rw [Finset.mem_sdiff, Finset.mem_singleton]
@@ -782,9 +686,6 @@ theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cI
           rw [eq_sub_iff_add_eq, add_left_cancel_iff, Fin.one_eq_zero_iff] at h₂
           omega⟩
 
-/--
-If `cIcc a b` is not equal to `univ`, then the complement of `cIcc a b` is `cIcc (b + 1) (a - 1)`.
--/
 theorem Fin.cIcc_compl {a b : Fin (n + 1)} (h : Fin.cIcc a b ≠ Finset.univ) : Finset.univ \ (Fin.cIcc a b) = Fin.cIcc (b + 1) (a - 1) := by
   if h₁ : a = b then
     subst h₁
@@ -828,13 +729,11 @@ theorem Fin.cIcc_compl {a b : Fin (n + 1)} (h : Fin.cIcc a b ≠ Finset.univ) : 
 
 end basic
 
-
-
 section
 
 variable (n : ℕ)
 
-/- A term `cut : cuts n` for some positive integer `n` represents a cut that divides the pizza into `n + 1`-pieces, indexed from `0`. For each piece `i`, `cut i` is the area of that piece. -/
+/- A term `cut : cuts n` for some positive integer `n` represents a cut that divides the pizza into `n + 1`-pieces. indexed from `0`. For each piece `i`, `cut i` is the area of that piece. -/
 def cuts :=
   {f : Fin (n + 1) → ℝ // (∀ i : Fin (n + 1), f i ≥ 0) ∧ ∑ i : Fin (n + 1), f i = 1}
 
@@ -1222,16 +1121,16 @@ section
 
 variable {n : ℕ}
 
-def red_pieces (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
+noncomputable def red_pieces (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
   {x | x ∈ Fin.cIcc a b ∧ Even (x - a).val}.toFinset
 
-def green_pieces (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
+noncomputable def green_pieces (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
   {x | x ∈ Fin.cIcc a b ∧ Odd (x - a).val}.toFinset
 
-def red_pieces₀ (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
+noncomputable def red_pieces₀ (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
   {x | x ∈ Fin.cIcc a b ∧ Even (b - x).val}.toFinset
 
-def green_pieces₀ (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
+noncomputable def green_pieces₀ (a b : Fin (n + 1)) : Finset (Fin (n + 1)) :=
   {x | x ∈ Fin.cIcc a b ∧ Odd (b - x).val}.toFinset
 
 theorem mem_red_pieces {a b : Fin (n + 1)} (x : Fin (n + 1)) : x ∈ red_pieces a b ↔ x ∈ Fin.cIcc a b ∧ Even (x - a).val := by
