@@ -300,8 +300,6 @@ theorem Fin.mem_cIcc_antisymm {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.
       · rw [hd]
         exact ⟨right_btw a b, left_btw b a⟩
 
-theorem Fin.le_add_one {a : Fin (n + 1)} (h : a < Fin.last n) : a
-
 theorem Fin.add_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a + 1 ∈ Fin.cIcc a b := by
   intro b h
   simp [cIcc, h]
@@ -310,11 +308,81 @@ theorem Fin.add_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a + 1 ∈ Fi
   · next h' =>
     constructor
     · have : a < Fin.last n := lt_of_lt_of_le h' (Fin.le_last b)
-
-      sorry
-    · sorry
+      apply Fin.le_def.mpr
+      rw [Fin.val_add_one_of_lt this]
+      simp
+    · apply Fin.add_one_le_of_lt h'
   · next h' =>
-    sorry
+    have := le_of_not_lt h'
+    have h₁ := lt_or_eq_of_le this
+    rcases h₁ with h₁ | h₁
+    · simp [h₁]
+      if hd : a < Fin.last n then
+        left
+        apply Fin.le_def.mpr
+        rw [Fin.val_add_one_of_lt hd]
+        simp
+      else
+        have hd := le_of_not_lt hd
+        have hd' := le_last a
+        have hd := eq_of_le_of_le hd' hd
+        right
+        simp [hd]
+    · simp [h₁]
 
 theorem Fin.sub_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a - 1 ∈ Fin.cIcc b a := by
+  intro b h
+  simp [cIcc, h.symm]
+  simp only [btw]
+  split
+  · next h' =>
+    have := zero_le b
+    have := lt_of_le_of_lt this h'
+    have hd : ¬ a = 0 := pos_iff_ne_zero.mp this
+    have h' := Fin.lt_def.mp h'
+    constructor
+    · apply Fin.le_def.mpr
+      simp [Fin.coe_sub_one]
+      simp [hd]
+      exact (Nat.le_sub_one_iff_lt this).mpr h'
+    · apply Fin.le_def.mpr
+      simp [Fin.coe_sub_one]
+      simp [hd]
+  · next h' =>
+    have := le_of_not_lt h'
+    have h₁ := lt_or_eq_of_le this
+    rcases h₁ with h₁ | h₁
+    · simp [h₁]
+      if hd : 1 ≤ a then
+        right
+        exact hd
+      else
+        if g : 0 < n then
+          left
+          have hd := lt_of_not_le hd
+          have hd := Fin.lt_def.mp hd
+          have hd := Nat.le_sub_one_of_lt hd
+          have : (1 : Fin (n + 1)).val = (1 : ℕ) := by
+            simp
+            exact g
+          rw [this] at hd
+          simp at hd
+          have : (0 : Fin (n + 1)).val = (0 : ℕ) := rfl
+          rw [← this] at hd
+          have hd := Fin.val_inj.mp hd
+          apply Fin.le_def.mpr
+          rw [Fin.coe_sub_one]
+          simp [hd]
+          have : (Fin.last n).val = n := rfl
+          simp_rw [← this]
+          apply Fin.le_def.mp
+          exact le_last b
+        else
+          simp at g
+          subst g
+          left
+          simp
+    · simp [h₁]
+
+theorem Fin.val_sub_add_eq_iff_mem_cIcc {a b : Fin (n + 1)} (x : Fin (n + 1)) : (x - a).val + (b - x).val = (b - a).val ↔ x ∈ Fin.cIcc a b := by
   sorry
