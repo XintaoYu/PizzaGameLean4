@@ -1,18 +1,17 @@
 import Mathlib
 
-variable (R : Type*) [CommRing R] [IsDomain R] [DiscreteValuationRing R]
--- instance : IsNoetherianRing R := inferInstance
+variable (R : Type*) [EuclideanDomain R]
 
--- instance : IsDedekindDomain R := inferInstance
+instance : CancelCommMonoidWithZero R := inferInstance
 
--- instance : IsDedekindRing R := inferInstance
+instance : DecompositionMonoid R := inferInstance
 
-example : Ring.DimensionLEOne R := by
-  exact IsDedekindRing.toDimensionLEOne
+example : ∀ a : R, Irreducible a ↔ Prime a := by
+  intro a
+  exact @irreducible_iff_prime R _ _ a
 
-example : Order.krullDim ℤ = 1 := by
-  sorry
+example : Subsingleton (ℤ →+* ℤ) := by
+  exact RingHom.Int.subsingleton_ringHom
 
-example : ringKrullDim R = 1 := by
-  unfold ringKrullDim
-  sorry
+example : Unique (ℤ →+* ℤ) := by
+  exact Unique.mk' (ℤ →+* ℤ)
