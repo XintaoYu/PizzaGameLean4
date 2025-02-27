@@ -385,4 +385,65 @@ theorem Fin.sub_one_mem_cIcc {a : Fin (n + 1)} : ∀ b, a ≠ b → a - 1 ∈ Fi
     · simp [h₁]
 
 theorem Fin.val_sub_add_eq_iff_mem_cIcc {a b : Fin (n + 1)} (x : Fin (n + 1)) : (x - a).val + (b - x).val = (b - a).val ↔ x ∈ Fin.cIcc a b := by
-  sorry
+  if h : a = b then
+    simp [h]
+    simp [mem_cIcc_self]
+    have : (0 : ℕ) = (0 : Fin (n + 1)) := rfl
+    rw [this] at *
+    simp only [Fin.val_inj]
+    rw [sub_eq_zero]
+    rw [sub_eq_zero]
+    simp
+    intro h'
+    exact h'.symm
+  else
+    rw [Fin.mem_cIcc_of_ne h x]
+    simp only [btw]
+    split
+    · next h' =>
+      constructor
+      · intro h₁
+        by_contra h₂
+        simp at h₂
+        have h₃ := lt_or_ge x a
+        rcases h₃ with h₃ | h₃
+        · have : (x - a).val = n + 1 - a.val + x.val := by
+            rw [sub_def]
+            dsimp
+            have : n + 1 - a.val + x.val < n + 1 := by
+              have h₃ := Fin.val_fin_lt.mpr h₃
+              omega
+            rw [Nat.mod_eq_of_lt this]
+          rw [Fin.sub_val_of_le (le_of_lt (lt_trans h₃ h'))] at h₁
+          rw [this] at h₁
+          rw [Fin.sub_val_of_le (le_of_lt h')] at h₁
+          rw [add_assoc, Nat.add_sub_cancel' (le_of_lt (Fin.val_fin_lt.mpr (lt_trans h₃ h')))] at h₁
+          omega
+        · have h₂ := h₂ h₃
+          have : a ≤ x := h₃
+          have := Fin.sub_val_of_le this
+          rw [this] at h₁
+          have : (b - x).val = n + 1 - x.val + b.val := by
+            rw [sub_def]
+            dsimp
+            have : n + 1 - x.val + b.val < n + 1 := by
+              have h₃ := Fin.val_fin_lt.mpr h₂
+              omega
+            rw [Nat.mod_eq_of_lt this]
+          rw [this] at h₁
+          rw [Fin.sub_val_of_le (le_of_lt h')] at h₁
+          omega
+      · intro h₁
+        rw [Fin.sub_val_of_le h₁.1]
+        rw [Fin.sub_val_of_le h₁.2]
+        rw [Fin.sub_val_of_le (le_of_lt h')]
+        omega
+    · next h' =>
+      have h' := le_of_not_lt h'
+      have h : ¬ b = a := fun a₁ ↦ h (id (Eq.symm a₁))
+      have h' := lt_of_le_of_ne h' h
+      simp [h']
+      constructor
+      · intro h₁
+        sorry
+      · sorry
