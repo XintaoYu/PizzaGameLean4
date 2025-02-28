@@ -973,4 +973,307 @@ theorem Fin.cIcc_subset_left {a b : Fin (n + 1)} {x : Fin (n + 1)} : x ∈ Fin.c
             exact le_trans ht h
 
 theorem Fin.cIcc_sdiff_endpoint_left {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIcc a b \ {a} = Fin.cIcc (a + 1) b := by
-  sorry
+  ext x
+  simp only [cIcc]
+  if h₁ : a + 1 = b then
+    subst h₁
+    simp [h]
+    simp only [btw]
+    split
+    · next h' =>
+      constructor
+      · intro h₁
+        have := lt_of_le_of_ne h₁.1.1 (fun a₁ ↦ h₁.2 (id (Eq.symm a₁)))
+        have := add_one_le_of_lt this
+        exact eq_of_le_of_le h₁.1.2 this
+      · intro h₁
+        subst h₁
+        simp
+        have : ¬ n = 0 := by
+          by_contra g
+          subst g
+          have := Fin.fin_one_eq_zero (a + 1)
+          simp [this] at h
+        exact ⟨le_of_lt h', this⟩
+    · next h' =>
+      have h' := le_of_not_lt h'
+      have := Fin.add_one_le_iff.mp h'
+      subst this
+      simp
+      have := Fin.zero_le (Fin.last n)
+      have := lt_or_eq_of_le this
+      rcases this with g | g
+      · simp [g]
+        omega
+      · simp [g]
+        have := Fin.last_eq_zero_iff.mp g.symm
+        subst this
+        have := Fin.fin_one_eq_zero (Fin.last 0 + 1)
+        simp [this] at h
+  else
+    simp [h, h₁]
+    simp [btw]
+    constructor
+    · intro h₂
+      split at h₂
+      · next h' =>
+        have := lt_of_le_of_ne (add_one_le_of_lt h') h₁
+        simp [this, h₂.1.2]
+        exact add_one_le_of_lt (lt_of_le_of_ne h₂.1.1 (fun a₁ ↦ h₂.2 (id (Eq.symm a₁))))
+      · next h' =>
+        have h' := lt_of_le_of_ne (le_of_not_lt h') (fun a₁ ↦ h (id (Eq.symm a₁)))
+        simp [h'] at h₂
+        split
+        · next h'' =>
+          have := lt_trans h'' h'
+          have := Fin.add_one_le_iff.mp (le_of_lt this)
+          subst this
+          simp at *
+          omega
+        · next h'' =>
+          have h'' := lt_of_le_of_ne (le_of_not_lt h'') fun a₁ ↦ h₁ (id (Eq.symm a₁))
+          simp [h'']
+          rcases h₂.1 with g | g
+          · left
+            exact add_one_le_of_lt (lt_of_le_of_ne g (fun a₁ ↦ h₂.2 (id (Eq.symm a₁))))
+          · right
+            exact g
+    · intro h₂
+      split at h₂
+      · next h' =>
+        split
+        · next h'' =>
+          if g : a + 1 ≤ a then
+            have := Fin.add_one_le_iff.mp g
+            subst this
+            have : ¬ Fin.last n < b := not_lt_of_le (Fin.le_last b)
+            contradiction
+          else
+            have g := lt_of_not_le g
+            have g := lt_of_lt_of_le g h₂.1
+            simp [le_of_lt g, h₂.2]
+            exact fun a₁ ↦ ne_of_lt g (id (Eq.symm a₁))
+        · next h'' =>
+          have h'' := lt_of_le_of_ne (le_of_not_lt h'') fun a₁ ↦ h (id (Eq.symm a₁))
+          simp [h'']
+          have := le_trans h₂.1 h₂.2
+          have := lt_of_le_of_lt this h''
+          have := Fin.add_one_le_iff.mp (le_of_lt this)
+          subst this
+          simp at *
+          omega
+      · next h' =>
+        have h' := lt_of_le_of_ne (le_of_not_lt h') (fun a₁ ↦ h₁ (id (Eq.symm a₁)))
+        simp [h'] at h₂
+        split
+        · next h'' =>
+          have h'' := add_one_le_of_lt h''
+          have := lt_of_lt_of_le h' h''
+          have g : ¬ b < b := not_lt_of_le (Fin.le_refl b)
+          contradiction
+        · next h'' =>
+          have h'' := lt_of_le_of_ne (le_of_not_lt h'') fun a₁ ↦ h (id (Eq.symm a₁))
+          simp [h'']
+          rcases h₂ with g | g
+          · have : a < Fin.last n := by
+              by_contra g'
+              simp at g'
+              subst g'
+              simp at h'
+            have := Fin.lt_add_one_iff.mpr this
+            have g := lt_of_lt_of_le this g
+            have := ne_of_lt g
+            have : ¬ x = a := fun a₁ => this (id (Eq.symm a₁))
+            simp [this]
+            left
+            exact le_of_lt g
+          · have := lt_of_le_of_lt g h''
+            have := ne_of_lt this
+            simp [this]
+            right
+            exact g
+
+theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cIcc a b \ {b} = Fin.cIcc a (b - 1) := by
+  ext x
+  simp only [cIcc]
+  if h₁ : a = b - 1 then
+    simp [h]
+    subst h₁
+    simp
+    simp only [btw]
+    split
+    · next h' =>
+      constructor
+      · intro ⟨h₁, h₂⟩
+        have := lt_of_le_of_ne h₁.2 h₂
+        have : x ≤ b - 1 := by
+          by_contra g
+          simp at g
+          have this' := add_one_le_of_lt g
+          simp at this'
+          have := not_le_of_lt this
+          contradiction
+        exact eq_of_le_of_le this h₁.1
+      · intro h₁
+        subst h₁
+        simp
+        have := lt_of_le_of_lt (Fin.zero_le (b - 1)) h'
+        have g := add_one_le_of_lt this
+        simp at g
+        simp [g]
+        by_contra g'
+        subst g'
+        have g := Fin.fin_one_eq_zero b
+        omega
+    · next h' =>
+      have := lt_of_le_of_ne (le_of_not_lt h') fun a₁ ↦ h (id (Eq.symm a₁))
+      simp [this]
+      constructor
+      · intro ⟨g₁, g₂⟩
+        have := Fin.le_sub_one_iff.mp (le_of_lt this)
+        subst this
+        simp [g₂] at g₁
+        have g' : -1 = Fin.last n := by
+          apply Fin.val_inj.mp
+          simp
+        rw [g'] at g₁
+        have := Fin.le_last x
+        have g'' := eq_of_le_of_le this g₁
+        have : (0 : Fin (n + 1)) - (1 : Fin (n + 1)) = -1 := rfl
+        rw [this]
+        rw [g']
+        exact g''
+      · intro g
+        subst g
+        simp
+        by_contra g
+        subst g
+        have g := Fin.fin_one_eq_zero (b - 1)
+        simp [g] at this
+  else
+    simp [h, h₁]
+    simp only [btw]
+    split
+    · next h' =>
+      split
+      · next h'' =>
+        constructor
+        · intro g
+          simp [g.1.1]
+          by_contra g₁
+          simp at g₁
+          have g₁ := add_one_le_of_lt g₁
+          simp at g₁
+          have g₁ := eq_of_le_of_le g.1.2 g₁
+          exact g.2 g₁
+        · intro g
+          simp [g.1]
+          if g₁ : b - 1 < b then
+            constructor
+            · exact le_of_lt (lt_of_le_of_lt g.2 g₁)
+            · exact ne_of_lt (lt_of_le_of_lt g.2 g₁)
+          else
+            simp at g₁
+            subst g₁
+            have h'' : ¬ a < 0 := not_lt_of_le (Fin.zero_le a)
+            contradiction
+      · next h'' =>
+        have h'' := lt_of_le_of_ne (le_of_not_lt h'') fun a₁ ↦ h₁ (id (Eq.symm a₁))
+        simp [h'']
+        have h'' := add_one_le_of_lt h''
+        simp at h''
+        have := lt_of_lt_of_le h' h''
+        have g := Fin.le_refl a
+        have g := not_lt_of_le g
+        contradiction
+    · next h' =>
+      have h' := lt_of_le_of_ne (le_of_not_lt h') fun a₁ ↦ h (id (Eq.symm a₁))
+      simp [h']
+      split
+      · next h'' =>
+        have := lt_trans h' h''
+        have := Fin.le_sub_one_iff.mp (le_of_lt this)
+        subst this
+        simp at *
+        have : -1 = Fin.last n := by
+          apply Fin.val_inj.mp
+          simp
+        simp [this]
+        have := Fin.le_last x
+        simp [this]
+        omega
+      · next h'' =>
+        have h'' := lt_of_le_of_ne (le_of_not_lt h'') fun a₁ ↦ h₁ (id (Eq.symm a₁))
+        simp [h'']
+        constructor
+        · intro ⟨g₁, g₂⟩
+          rcases g₁ with g | g
+          · left
+            exact g
+          · right
+            have g := lt_of_le_of_ne g g₂
+            match n with
+            | 0 => omega
+            | m + 1 =>
+              apply Fin.le_def.mpr
+              have : 1 ≤ b := by
+                by_contra g'
+                simp at g'
+                subst g'
+                simp at h''
+                have : -(1 : Fin (m + 1 + 1)) = Fin.last (m + 1) := by
+                  apply Fin.val_inj.mp
+                  simp
+                rw [this] at h''
+                have := Fin.le_last a
+                have := not_lt_of_le this
+                contradiction
+              rw [Fin.sub_val_of_le this]
+              have g := Fin.lt_def.mp g
+              simp
+              exact (Nat.le_sub_one_iff_lt this).mpr g
+        · intro g
+          rcases g with g | g
+          · have h' := lt_of_lt_of_le h' g
+            have h' := ne_of_lt h'
+            have h' : ¬ x = b := fun a₁ ↦ h' (id (Eq.symm a₁))
+            simp [h']
+            left
+            exact g
+          · match n with
+            | 0 =>
+              have := fin_one_eq_zero a
+              have this' := fin_one_eq_zero b
+              rw [← this'] at this
+              contradiction
+            | m + 1 =>
+              have : b - 1 < b := by
+                apply Fin.sub_one_lt_iff.mpr
+                by_contra g
+                simp at g
+                subst g
+                have : 0 - 1 = Fin.last (m + 1) := by
+                  apply Fin.val_inj.mp
+                  simp
+                rw [this] at h''
+                have := Fin.le_last a
+                have := not_lt_of_le this
+                contradiction
+              have := lt_of_le_of_lt g this
+              have ht := ne_of_lt this
+              simp [ht]
+              right
+              exact le_of_lt this
+
+theorem Fin.cIcc_compl {a b : Fin (n + 1)} (h : Fin.cIcc a b ≠ Finset.univ) : Finset.univ \ (Fin.cIcc a b) = Fin.cIcc (b + 1) (a - 1) := by
+  ext x
+  simp [cIcc]
+  split
+  · next h₁ =>
+    split
+    · next h₂ =>
+      sorry
+    · next h₂ =>
+      sorry
+  · next h₁ =>
+    sorry
