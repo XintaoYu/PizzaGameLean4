@@ -1,6 +1,8 @@
 import Mathlib
 
 --NOTE : it seems that we can replace n with n + 1 and NeZero n ; it is equivalent to n > 1 and there will be much lesser cases to deal with
+
+section basic
 variable {n : ℕ}
 
 instance Fin.instCircularOrder : CircularOrder (Fin (n + 1)) where
@@ -1265,15 +1267,573 @@ theorem Fin.cIcc_sdiff_endpoint_right {a b : Fin (n + 1)} (h : a ≠ b) : Fin.cI
               right
               exact le_of_lt this
 
+-- private lemma Fin.one_ne_neg_one_iff_fin_gt_two : (1 : Fin (n + 1)) ≠ -1 ↔ n > 1 := by
+--   constructor
+--   · intro h
+--     by_contra g
+--     simp at g
+--     have g : n = 0 ∨ n = 1 := by omega
+--     rcases g with g | g
+--     · subst g
+--       have := Fin.fin_one_eq_zero 1
+--       nth_rw 1 [this] at h
+--       have := Fin.fin_one_eq_zero (-(1 : Fin 1))
+--       rw [this] at h
+--       contradiction
+--     · subst g
+--       have : (1 : Fin 2) = (- 1 : Fin 2) := by
+--         apply Fin.val_inj.mp
+--         simp
+--       contradiction
+--   · intro h
+--     by_contra g
+--     have := Fin.val_inj.mpr g
+--     simp at this
+--     rw [Nat.mod_eq_of_lt (by omega)] at this
+--     linarith
+
 theorem Fin.cIcc_compl {a b : Fin (n + 1)} (h : Fin.cIcc a b ≠ Finset.univ) : Finset.univ \ (Fin.cIcc a b) = Fin.cIcc (b + 1) (a - 1) := by
-  ext x
-  simp [cIcc]
-  split
-  · next h₁ =>
+  -- ext x
+  -- simp [cIcc]
+  -- split
+  -- · next h₁ =>
+  --   split
+  --   · next h₂ =>
+  --     subst h₁
+  --     match n with
+  --     | 0 =>
+  --       simp [cIcc] at h
+  --       have := Fin.fin_one_eq_zero a
+  --       contradiction
+  --     | 1 =>
+  --       have : a = 0 ∨ a = 1 := by
+  --         let p : Fin 2 → Prop := fun x ↦ x = 0 ∨ x = 1
+  --         have : ∀ i : Fin 2 , p i := by
+  --           apply (@Fin.forall_fin_two p).mpr
+  --           simp [p]
+  --         have := this a
+  --         simp [p] at this
+  --         exact this
+  --       rcases this with h₁ | h₁
+  --       · subst h₁
+  --         simp
+  --         omega
+  --       · subst h₁
+  --         simp
+  --         omega
+  --     | m + 2 =>
+  --       have := Fin.val_inj.mpr h₂
+  --       rw [Fin.val_add] at this
+  --       if g : 1 ≤ a then
+  --         rw [Fin.sub_val_of_le g] at this
+  --         simp at this
+  --         if g₁ : a.val < m + 2 then
+  --           rw [Nat.mod_eq_of_lt] at this
+  --           omega
+  --           simp [g₁]
+  --         else
+  --           simp at g₁
+  --           have this' := Fin.le_def.mp (Fin.le_last a)
+  --           simp at this'
+  --           have this' := eq_of_le_of_le this' g₁
+  --           simp [this'] at this
+  --       else
+  --         simp at g
+  --         have : (0 : Fin (m + 1 + 2)) = (0 : Fin (m + 2 + 1)) := rfl
+  --         rw [this] at g
+  --         subst g
+  --         simp at h₂
+  --         have := Fin.val_inj.mpr h₂
+  --         simp at this
+  --   · next h₂ =>
+  --     subst h₁
+  --     simp at *
+  --     if g : a = 0 then
+  --       subst g
+  --       simp at *
+  --       simp [btw]
+  --       have h₁ : (1 : Fin (n + 1)) < -1 := by
+  --         apply Fin.lt_def.mpr
+  --         simp
+  --         rw [Nat.mod_eq_of_lt (by omega)]
+  --         apply Fin.one_ne_neg_one_iff_fin_gt_two.mp h₂
+  --       simp [h₁]
+  --       have : -(1 : Fin (n + 1)) = Fin.last n := by
+  --         apply Fin.val_inj.mp
+  --         simp
+  --       simp_rw [this] at *
+  --       constructor
+  --       · intro g
+  --         simp [Fin.le_last x]
+  --         by_contra g'
+  --         simp at g'
+  --         apply Fin.lt_def.mp at g'
+  --         simp at g'
+  --         rw [Nat.mod_eq_of_lt (by omega)] at g'
+  --         simp at g'
+  --         have : x = (0 : Fin (n + 1)) := Fin.val_inj.mp g'
+  --         contradiction
+  --       · intro g
+  --         by_contra g'
+  --         subst g'
+  --         simp at g
+  --         subst g
+  --         have : (1 : Fin 1) = 0 := Fin.fin_one_eq_zero 1
+  --         rw [this] at h₂
+  --         have := Fin.fin_one_eq_zero (Fin.last 0)
+  --         rw [this] at h₂
+  --         contradiction
+  --     else if g' : a = Fin.last n then
+  --       subst g'
+  --       simp at *
+  --       constructor
+  --       · intro g₁
+  --         simp [btw]
+  --         have : 0 ≤ Fin.last n - 1 := by
+  --           apply Fin.le_def.mpr
+  --           simp
+  --         simp [lt_of_le_of_ne this h₂]
+  --         by_contra g₂
+  --         simp at g₂
+  --         apply Fin.lt_def.mp at g₂
+  --         rw [Fin.sub_val_of_le (Fin.le_last 1)] at g₂
+  --         simp at g₂
+  --         rw [Nat.mod_eq_of_lt (by omega)] at g₂
+  --         have := Fin.lt_def.mp (lt_of_le_of_ne (Fin.le_last x) g₁)
+  --         simp at this
+  --         omega
+  --       · intro g₁
+  --         simp [btw] at g₁
+  --         have : 0 ≤ Fin.last n - 1 := by
+  --           apply Fin.le_def.mpr
+  --           simp
+  --         simp [lt_of_le_of_ne this h₂] at g₁
+  --         by_contra g₂
+  --         subst g₂
+  --         apply Fin.le_def.mp at g₁
+  --         rw [Fin.sub_val_of_le (Fin.le_last 1)] at g₁
+  --         simp at g₁
+  --         rw [Nat.mod_eq_of_lt (by omega)] at g₁
+  --         omega
+  --     else
+  --       simp [btw]
+  --       have g₁ : 1 ≤ a := by
+  --         by_contra g₁
+  --         simp at g₁
+  --         apply Fin.lt_def.mp at g₁
+  --         simp at g₁
+  --         rw [Nat.mod_eq_of_lt (by omega)] at g₁
+  --         have : a.val = 0 := by linarith
+  --         have : a = (0 : Fin (n + 1)) := Fin.val_inj.mp this
+  --         contradiction
+  --       have g₂ : a.val + 1 < n + 1 := by
+  --         apply add_lt_add_right
+  --         have := Fin.lt_def.mp (lt_of_le_of_ne (Fin.le_last a) g')
+  --         simp at this
+  --         exact this
+  --       split
+  --       · next h₃ =>
+  --         apply Fin.lt_def.mp at h₃
+  --         rw [Fin.val_add] at h₃
+  --         rw [Fin.sub_val_of_le g₁] at h₃
+  --         simp at h₃
+  --         rw [Nat.mod_eq_of_lt g₂] at h₃
+  --         rw [Nat.mod_eq_of_lt (by omega)] at h₃
+  --         omega
+  --       · next h₃ =>
+  --         have h₃ := lt_of_le_of_ne (le_of_not_lt h₃) (fun a_1 ↦ h₂ (id (Eq.symm a_1)))
+  --         simp [h₃]
+  --         constructor
+  --         · intro h'
+  --           by_contra h''
+  --           simp at h''
+  --           have h₁ := Fin.lt_def.mp h''.1
+  --           have h₂ := Fin.lt_def.mp h''.2
+  --           rw [Fin.val_add] at h₁
+  --           simp at h₁
+  --           rw [Nat.mod_eq_of_lt g₂] at h₁
+  --           rw [Fin.sub_val_of_le g₁] at h₂
+  --           have : (1 : Fin (n + 1)).val = 1 := by
+  --             simp
+  --             omega
+  --           rw [this] at h₂
+  --           have : x.val ≠ a.val := by
+  --             by_contra hg
+  --             have hg := Fin.val_inj.mp hg
+  --             contradiction
+  --           omega
+  --         · intro h'
+  --           rcases h' with h₁ | h₁
+  --           · have : a < a + 1 := by
+  --               apply Fin.lt_def.mpr
+  --               rw [Fin.val_add]
+  --               simp
+  --               rw [Nat.mod_eq_of_lt g₂]
+  --               simp
+  --             have h₁ := lt_of_lt_of_le this h₁
+  --             have := ne_of_lt h₁
+  --             exact id (Ne.symm this)
+  --           · have : a - 1 < a := by
+  --               apply Fin.lt_def.mpr
+  --               rw [Fin.sub_val_of_le g₁]
+  --               have : (1 : Fin (n + 1)).val = 1 := by
+  --                 simp
+  --                 omega
+  --               rw [this]
+  --               simp
+  --               omega
+  --             have h₁ := lt_of_le_of_lt h₁ this
+  --             exact ne_of_lt h₁
+  -- · next h₁ =>
+  --   split
+  --   · next h₂ =>
+  --     simp [btw]
+  --     split
+  --     · next h₃ =>
+  --       if g₁ : a = 0 then
+  --         subst g₁
+  --         simp at *
+  --         have h₂ := Fin.val_inj.mpr h₂
+  --         rw [Fin.val_add] at h₂
+  --         simp at h₂
+  --         have : b.val + 1 < n + 1 := by
+  --           apply add_lt_add_right
+  --           by_contra g
+  --           simp at g
+  --           have : b.val ≤ n := Fin.le_def.mp (Fin.le_last b)
+  --           have := eq_of_le_of_le this g
+  --           rw [this] at h₂
+  --           simp at h₂
+  --           have h₂ := h₂.symm
+  --           subst h₂
+  --           have := Fin.fin_one_eq_zero b
+  --           omega
+  --         rw [Nat.mod_eq_of_lt this] at h₂
+  --         have h₂ : b.val = n - 1 := by
+  --           omega
+  --         constructor
+  --         · intro g
+  --           have g := Fin.lt_def.mp g
+  --           rw [h₂] at g
+  --           have g : n ≤ x.val := by omega
+  --           have : x.val ≤ n := Fin.le_def.mp (Fin.le_last x)
+  --           have := eq_of_le_of_le this g
+  --           apply Fin.val_inj.mp
+  --           rw [this]
+  --           rw [Fin.val_add]
+  --           rw [h₂]
+  --           simp
+  --           rw [Nat.sub_add_cancel (by omega)]
+  --           simp
+  --         · intro g
+  --           rw [g]
+  --           apply Fin.lt_def.mpr
+  --           rw [Fin.val_add]
+  --           rw [h₂]
+  --           simp
+  --           rw [Nat.sub_add_cancel (by omega)]
+  --           simp
+  --           omega
+  --       else if g₂ : b = Fin.last n then
+  --         rw [g₂] at h₂
+  --         simp at h₂
+  --         have g₁ : 0 < a.val := by
+  --           by_contra g
+  --           simp at g
+  --           have : a = (0 : Fin (n + 1)) := Fin.val_inj.mp g
+  --           omega
+  --         have h₂ : a = 1 := by
+  --           have : 1 ≤ a.val := by omega
+  --           have this' : (1 : Fin (n + 1)) ≤ a := by
+  --             apply Fin.le_def.mpr
+  --             simp
+  --             rw [Nat.mod_eq_of_lt (by omega)]
+  --             exact this
+  --           have := Fin.val_inj.mpr h₂
+  --           rw [Fin.sub_val_of_le this'] at this
+  --           simp at this
+  --           rw [Nat.mod_eq_of_lt (by omega)] at this
+  --           apply Fin.val_inj.mp
+  --           simp
+  --           rw [Nat.mod_eq_of_lt (by omega)]
+  --           omega
+  --         subst g₂
+  --         subst h₂
+  --         simp
+  --         constructor
+  --         · intro g
+  --           if g' : 1 ≤ x then
+  --             have g := g g'
+  --             have := Fin.le_last x
+  --             have := not_lt_of_le this
+  --             contradiction
+  --           else
+  --             simp at g'
+  --             have := Fin.lt_def.mp g'
+  --             simp at this
+  --             rw [Nat.mod_eq_of_lt (by omega)] at this
+  --             apply Fin.val_inj.mp
+  --             simp
+  --             omega
+  --         · intro g
+  --           subst g
+  --           simp
+  --           omega
+  --       else
+  --         have h₂ := Fin.val_inj.mpr h₂
+  --         have g₁ : 1 ≤ a := by
+  --           apply Fin.val_fin_le.mp
+  --           simp
+  --           rw [Nat.mod_eq_of_lt (by omega)]
+  --           by_contra g
+  --           simp at g
+  --           have : a = 0 := Fin.val_inj.mp g
+  --           contradiction
+  --         have g₂ : b.val + 1 < n + 1 := by
+  --           apply add_lt_add_right
+  --           by_contra g
+  --           simp at g
+  --           have : b.val ≤ n := Fin.le_def.mp (Fin.le_last b)
+  --           have := eq_of_le_of_le this g
+  --           have : b = Fin.last n := by
+  --             apply Fin.val_inj.mp
+  --             simp
+  --             exact this
+  --           contradiction
+  --         rw [Fin.val_add] at h₂
+  --         rw [Fin.sub_val_of_le g₁] at h₂
+  --         simp at h₂
+  --         rw [Nat.mod_eq_of_lt g₂] at h₂
+  --         rw [Nat.mod_eq_of_lt (by omega)] at h₂
+  --         constructor
+  --         · intro g
+  --           simp at g
+  --           if g' : a ≤ x then
+  --             have g := g g'
+
+  --             sorry
+  --           else
+  --           sorry
+  --         sorry
+  --     · next h₃ =>
+  --       sorry
+  --   · next h₂ =>
+  --     sorry
+  if h₁ : a = b then
+    subst h₁
+    rw [← Fin.cIcc_sdiff_endpoint_right (by
+      intro g
+      have : (a + 1).cIcc a = Finset.univ := Fin.cIcc_eq_univ.mpr rfl
+      nth_rw 1 [← g] at h
+      contradiction
+      )]
+    rw [Fin.cIcc_eq_univ.mpr rfl]
+    simp [cIcc]
+    -- ext x
+    -- simp [cIcc]
+    -- split
+    -- · next h₁ =>
+    --   match n with
+    --   | 0 =>
+    --     simp [cIcc] at h
+    --     have := Fin.fin_one_eq_zero a
+    --     contradiction
+    --   | 1 =>
+    --     have : a = 0 ∨ a = 1 := by
+    --       let p : Fin 2 → Prop := fun x ↦ x = 0 ∨ x = 1
+    --       have : ∀ i : Fin 2 , p i := by
+    --         apply (@Fin.forall_fin_two p).mpr
+    --         simp [p]
+    --       have := this a
+    --       simp [p] at this
+    --       exact this
+    --     rcases this with h₁ | h₁
+    --     · subst h₁
+    --       simp
+    --       omega
+    --     · subst h₁
+    --       simp
+    --       omega
+    --   | m + 2 =>
+    --     have h₁ := Fin.val_inj.mpr h₁
+    --     rw [Fin.val_add] at h₁
+    --     if h₂ : 1 ≤ a then
+    --       rw [Fin.sub_val_of_le h₂] at h₁
+    --       simp at h₁
+    --       if h₃ : a.val + 1 < m + 2 + 1 then
+    --         rw [Nat.mod_eq_of_lt h₃] at h₁
+    --         omega
+    --       else
+    --         simp at h₃
+    --         have : a.val ≤ m + 2 := Fin.le_def.mp (Fin.le_last a)
+    --         have := eq_of_le_of_le this h₃
+    --         simp [this] at h₁
+    --     else
+    --       simp at h₂
+    --       subst h₂
+    --       simp at h₁
+    -- · next h₁ =>
+    --   if g : a = 0 then
+    --     subst g
+    --     simp at *
+    --     simp [btw]
+    --     have h₁ : (1 : Fin (n + 1)) < -1 := by
+    --       apply Fin.lt_def.mpr
+    --       simp
+    --       rw [Nat.mod_eq_of_lt (by omega)]
+    --       apply Fin.one_ne_neg_one_iff_fin_gt_two.mp h₁
+    --     simp [h₁]
+    --     have : -(1 : Fin (n + 1)) = Fin.last n := by
+    --       apply Fin.val_inj.mp
+    --       simp
+    --     simp_rw [this] at *
+    --     constructor
+    --     · intro g
+    --       simp [Fin.le_last x]
+    --       by_contra g'
+    --       simp at g'
+    --       apply Fin.lt_def.mp at g'
+    --       simp at g'
+    --       rw [Nat.mod_eq_of_lt (by omega)] at g'
+    --       simp at g'
+    --       have : x = (0 : Fin (n + 1)) := Fin.val_inj.mp g'
+    --       contradiction
+    --     · intro g
+    --       by_contra g'
+    --       subst g'
+    --       simp at g
+    --       subst g
+    --       have : (1 : Fin 1) = 0 := Fin.fin_one_eq_zero 1
+    --       rw [this] at h₁
+    --       have := Fin.fin_one_eq_zero (Fin.last 0)
+    --       rw [this] at h₁
+    --       contradiction
+    --   else if g' : a = Fin.last n then
+    --     subst g'
+    --     simp at *
+    --     constructor
+    --     · intro g₁
+    --       simp [btw]
+    --       have : 0 ≤ Fin.last n - 1 := by
+    --         apply Fin.le_def.mpr
+    --         simp
+    --       simp [lt_of_le_of_ne this h₁]
+    --       by_contra g₂
+    --       simp at g₂
+    --       apply Fin.lt_def.mp at g₂
+    --       rw [Fin.sub_val_of_le (Fin.le_last 1)] at g₂
+    --       simp at g₂
+    --       rw [Nat.mod_eq_of_lt (by omega)] at g₂
+    --       have := Fin.lt_def.mp (lt_of_le_of_ne (Fin.le_last x) g₁)
+    --       simp at this
+    --       omega
+    --     · intro g₁
+    --       simp [btw] at g₁
+    --       have : 0 ≤ Fin.last n - 1 := by
+    --         apply Fin.le_def.mpr
+    --         simp
+    --       simp [lt_of_le_of_ne this h₁] at g₁
+    --       by_contra g₂
+    --       subst g₂
+    --       apply Fin.le_def.mp at g₁
+    --       rw [Fin.sub_val_of_le (Fin.le_last 1)] at g₁
+    --       simp at g₁
+    --       rw [Nat.mod_eq_of_lt (by omega)] at g₁
+    --       omega
+    --   else
+    --     simp [btw]
+    --     have g₁ : 1 ≤ a := by
+    --       by_contra g₁
+    --       simp at g₁
+    --       apply Fin.lt_def.mp at g₁
+    --       simp at g₁
+    --       rw [Nat.mod_eq_of_lt (by omega)] at g₁
+    --       have : a.val = 0 := by linarith
+    --       have : a = (0 : Fin (n + 1)) := Fin.val_inj.mp this
+    --       contradiction
+    --     have g₂ : a.val + 1 < n + 1 := by
+    --       apply add_lt_add_right
+    --       have := Fin.lt_def.mp (lt_of_le_of_ne (Fin.le_last a) g')
+    --       simp at this
+    --       exact this
+    --     split
+    --     · next h₃ =>
+    --       apply Fin.lt_def.mp at h₃
+    --       rw [Fin.val_add] at h₃
+    --       rw [Fin.sub_val_of_le g₁] at h₃
+    --       simp at h₃
+    --       rw [Nat.mod_eq_of_lt g₂] at h₃
+    --       rw [Nat.mod_eq_of_lt (by omega)] at h₃
+    --       omega
+    --     · next h₃ =>
+    --       have h₃ := lt_of_le_of_ne (le_of_not_lt h₃) (fun a_1 ↦ h₁ (id (Eq.symm a_1)))
+    --       simp [h₃]
+    --       constructor
+    --       · intro h'
+    --         by_contra h''
+    --         simp at h''
+    --         have h₁ := Fin.lt_def.mp h''.1
+    --         have h₂ := Fin.lt_def.mp h''.2
+    --         rw [Fin.val_add] at h₁
+    --         simp at h₁
+    --         rw [Nat.mod_eq_of_lt g₂] at h₁
+    --         rw [Fin.sub_val_of_le g₁] at h₂
+    --         have : (1 : Fin (n + 1)).val = 1 := by
+    --           simp
+    --           omega
+    --         rw [this] at h₂
+    --         have : x.val ≠ a.val := by
+    --           by_contra hg
+    --           have hg := Fin.val_inj.mp hg
+    --           contradiction
+    --         omega
+    --       · intro h'
+    --         rcases h' with h₁ | h₁
+    --         · have : a < a + 1 := by
+    --             apply Fin.lt_def.mpr
+    --             rw [Fin.val_add]
+    --             simp
+    --             rw [Nat.mod_eq_of_lt g₂]
+    --             simp
+    --           have h₁ := lt_of_lt_of_le this h₁
+    --           have := ne_of_lt h₁
+    --           exact id (Ne.symm this)
+    --         · have : a - 1 < a := by
+    --             apply Fin.lt_def.mpr
+    --             rw [Fin.sub_val_of_le g₁]
+    --             have : (1 : Fin (n + 1)).val = 1 := by
+    --               simp
+    --               omega
+    --             rw [this]
+    --             simp
+    --             omega
+    --           have h₁ := lt_of_le_of_lt h₁ this
+    --           exact ne_of_lt h₁
+  else
+    rw [← Fin.cIcc_sdiff_endpoint_left (show b ≠ a - 1 by
+      intro h₂
+      subst h₂
+      have : a - 1 + 1 = a := sub_add_cancel a 1
+      have : Fin.cIcc a (a - 1) = Finset.univ := Fin.cIcc_eq_univ.mpr this.symm
+      contradiction)
+      ]
+    rw [← Fin.cIcc_sdiff_endpoint_right (fun a_1 ↦ h₁ (id (Eq.symm a_1)))]
+    ext x
+    simp [cIcc]
+    simp [h₁]
+    have : ¬ b = a := fun a_1 ↦ h₁ (id (Eq.symm a_1))
+    simp [this]
+    simp [btw]
     split
     · next h₂ =>
-      sorry
+      have := not_lt_of_lt h₂
+      simp [this]
+      simp [h₂]
+      omega
     · next h₂ =>
-      sorry
-  · next h₁ =>
-    sorry
+      have := lt_of_le_of_ne (le_of_not_lt h₂) this
+      simp [h₂]
+      simp [this]
+      omega
+
+end basic
