@@ -1336,13 +1336,21 @@ def is_semicircle (a b : Fin (n + 1)) : Prop :=
   (Fin.cIcc a b).card = semicircle_size n
 
 def fB_finish (start : Fin (n + 1)) : Fin (n + 1) :=
-  start + (semicircle_size n - 1)
+  start + ((semicircle_size n - 1 : ℕ) : Fin (n + 1))
 
 theorem fB_finish_is_semicircle
     (h : Odd (n + 1)) (start : Fin (n + 1)) :
     is_semicircle (n := n) start (fB_finish (n := n) start) := by
   unfold is_semicircle fB_finish semicircle_size
-  rw [Fin.cIcc_card_eq, add_sub_cancel_left, Fin.val_natCast]
+  rw [Fin.cIcc_card_eq]
+  -- Goal: Fin.val (start + ↑((n+2)/2 - 1) - start) + 1 = (n+2)/2
+  have hsub : start + (((n + 2) / 2 - 1 : ℕ) : Fin (n + 1)) - start =
+      (((n + 2) / 2 - 1 : ℕ) : Fin (n + 1)) := by
+    rw [add_sub_cancel_left]
+  rw [hsub]
+  -- Goal: Fin.val (↑((n+2)/2 - 1 : ℕ) : Fin (n+1)) + 1 = (n+2)/2
+  rw [Fin.val_natCast]
+  -- Goal: (((n+2)/2 - 1) % (n+1)) + 1 = (n+2)/2
   have hk : (n + 2) / 2 - 1 < n + 1 := by
     omega
   rw [Nat.mod_eq_of_lt hk]
@@ -1454,9 +1462,7 @@ theorem fB_first_move_mem
   refine ⟨0, by simp, ?_⟩
   have hturn : game.strategy game.cut game.turn 0 := game.good_turn 0
   rw [hstr] at hturn
-  dsimp [fB_strategy] at hturn
-  simp at hturn
-  simpa using hturn
+  simpa [fB_strategy] using hturn
 
 theorem fB_even_move_is_red
     (h : Odd (n + 1)) (start : Fin (n + 1))
@@ -1527,7 +1533,23 @@ theorem current_state_card
   intro hi0
   rw [current_state_of_ne_zero hi0, Finset.card_sdiff (Finset.subset_univ _), Finset.card_univ]
   rw [card_taken_pieces]
-  have hipos : 0 < i.val := Fin.pos_iff_ne_zero.mpr hi0
+  have hcard_fin : Fintype.card (Fin (n + 1)) = n + 1 := by simp
+  rw [hcard_fin]
+  have hpos : 0 < i.val := Fin.pos_iff_ne_zero.mpr hi0
+  have hlt : i.val - 1 < n + 1 := by
+    have hi_lt : i.val < n + 1 := i.2
+    omega
+  have hval : (i - 1).val = i.val - 1 := by
+    rw [Fin.coe_sub i 1]
+    have h_one : (1 : Fin (n + 1)).val = 1 := by
+      simp [show 0 < n from NeZero.pos n]
+    rw [h_one]
+    have h_sub : (n + 1 : ℕ) - 1 = n := by omega
+    rw [h_sub]
+    have h_eq : n + i.val = (n + 1) + (i.val - 1) := by omega
+    rw [h_eq]
+    rw [Nat.add_mod, Nat.mod_self, zero_add, Nat.mod_mod, Nat.mod_eq_of_lt hlt]
+  rw [hval]
   omega
 
 theorem current_state_card_odd_of_even_round
@@ -1536,7 +1558,26 @@ theorem current_state_card_odd_of_even_round
     i ≠ 0 → Even i.val → Odd (current_state game.turn i).card := by
   intro hi0 hiEven
   rw [current_state_card game i hi0]
-  omega
+  rcases hodd with ⟨k₁, hk₁⟩
+  rcases hiEven with ⟨k₂, hk₂⟩
+  have hk₂_val : i.val = k₂ + k₂ := hk₂
+  have hi_bound : i.val ≤ n := by
+    have h := i.2
+    omega
+  have hn_eq : n = 2*k₁ := by omega
+  have hi_val_eq : i.val = 2*k₂ := by
+    rw [hk₂_val]
+    omega
+  have h_le : k₂ ≤ k₁ := by
+    have hineq : 2*k₂ ≤ 2*k₁ :=
+      calc
+        2*k₂ = i.val := by symm; exact hi_val_eq
+        _ ≤ n := hi_bound
+        _ = 2*k₁ := hn_eq
+    omega
+  have h_sub : (n + 1 - i.val) = 2*(k₁ - k₂) + 1 := by omega
+  rw [h_sub]
+  exact ⟨k₁ - k₂, rfl⟩
 
 theorem endpoints_mem_red_of_odd_state
     {a b : Fin (n + 1)}
@@ -1605,6 +1646,11 @@ theorem fB_alice_pieces_subset_fixed_arc
   by_cases hi0 : i = 0
   · subst hi0
     rw [← hxi]
+    have hfirst : game.turn.val 0 = start := by
+      have hturn : game.strategy game.cut game.turn 0 := game.good_turn 0
+      rw [hstr] at hturn
+      simpa [fB_strategy] using hturn
+    rw [hfirst]
     exact Fin.left_mem_cIcc
   · rw [← hxi]
     exact fB_even_move_mem_fixed_arc (n := n) h start game i hstr hi0 hiEven
@@ -1713,6 +1759,113 @@ theorem fB_terminal_subset_arc
   refine ⟨fB_finish (n := n) start, fB_finish_is_semicircle (n := n) h start, ?_⟩
   exact fB_alice_pieces_subset_fixed_arc (n := n) h cut start game hcut hstr
 
+theorem nat_count_even (m : ℕ) :
+    Nat.count (fun k => Even k) m = (m + 1) / 2 := by
+  induction m with
+  | zero =>
+      simp [Nat.count]
+  | succ m ih =>
+      rw [Nat.count_succ, ih]
+      by_cases hm : Even m
+      · rw [if_pos hm]
+        rw [Nat.even_iff] at hm
+        omega
+      · rw [if_neg hm]
+        have hm' : Odd m := Nat.not_even_iff_odd.mp hm
+        rw [Nat.odd_iff] at hm'
+        omega
+
+theorem red_pieces_card_eq_half_up
+    (start finish : Fin (n + 1)) :
+    (red_pieces start finish).card = ((Fin.cIcc start finish).card + 1) / 2 := by
+  let len := (finish - start).val
+  have hlen_bound : len + 1 ≤ n + 1 := by
+    dsimp [len]
+    exact Nat.succ_le_of_lt (finish - start).isLt
+  have hEq :
+      red_pieces start finish =
+        ((Finset.range (len + 1)).filter (fun i => Even i)).image
+          (fun (i : ℕ) => start + ((i : ℕ) : Fin (n + 1))) := by
+    ext x
+    constructor
+    · intro hx
+      rw [mem_red_pieces] at hx
+      rcases hx with ⟨hxIcc, hxEven⟩
+      rw [Fin.cIcc_eq_continuous_segment, Fin.mem_continuous_segment] at hxIcc
+      rcases hxIcc with ⟨m, _hm0, hmle, hxm⟩
+      rw [Finset.mem_image]
+      have hm_lt : m < len + 1 := Nat.lt_add_one_iff.mpr hmle
+      have hm_even : Even m := by
+        -- From hxEven: Even (x - start).val, and hxm: x = start + m
+        -- So (x - start).val = (start + m - start).val = m.val = m (since m < n+1)
+        have h_sub : (x - start).val = m := by
+          rw [hxm]
+          have hm_lt_n : m < n + 1 := lt_of_lt_of_le hm_lt hlen_bound
+          simp [hm_lt_n]
+        rw [h_sub] at hxEven
+        exact hxEven
+      refine ⟨m, ?_, hxm.symm⟩
+      · simp [Finset.mem_filter, Finset.mem_range, hm_lt, hm_even]
+    · intro hx
+      rw [Finset.mem_image] at hx
+      rcases hx with ⟨m, hm, hmx⟩
+      simp [Finset.mem_filter, Finset.mem_range] at hm
+      rcases hm with ⟨hm_lt, hm_even⟩
+      rw [mem_red_pieces]
+      have hx_even : Even (x - start).val := by
+        rw [← hmx]
+        have hm_lt_n : m < n + 1 := lt_of_lt_of_le hm_lt hlen_bound
+        rw [show ((start + (m : Fin (n + 1)) - start).val) = ((m : Fin (n + 1)).val) by simp]
+        rw [Fin.val_natCast, Nat.mod_eq_of_lt hm_lt_n]
+        exact hm_even
+      constructor
+      · rw [Fin.cIcc_eq_continuous_segment, Fin.mem_continuous_segment]
+        exact ⟨m, Nat.zero_le _, Nat.lt_add_one_iff.mp hm_lt, hmx.symm⟩
+      · exact hx_even
+  rw [hEq, Finset.card_image_of_injOn]
+  · rw [← Nat.count_eq_card_filter_range, Fin.cIcc_card_eq]
+    dsimp [len]
+    rw [nat_count_even]
+  · intro i hi j hj hij
+    simp [Finset.mem_filter, Finset.mem_range] at hi hj
+    rcases hi with ⟨hi_lt, _⟩
+    rcases hj with ⟨hj_lt, _⟩
+    have hi_n : i < n + 1 := lt_of_lt_of_le hi_lt hlen_bound
+    have hj_n : j < n + 1 := lt_of_lt_of_le hj_lt hlen_bound
+    -- hij: (fun i => start + (i : Fin (n+1))) i = (fun i => ...) j
+    have h_eq : (i : Fin (n + 1)) = (j : Fin (n + 1)) := by
+      simpa using hij
+    have h_val : ((i : Fin (n + 1)).val = (j : Fin (n + 1)).val) := congrArg Fin.val h_eq
+    rw [Fin.val_natCast, Fin.val_natCast, Nat.mod_eq_of_lt hi_n, Nat.mod_eq_of_lt hj_n] at h_val
+    exact h_val
+
+theorem red_pieces_card_of_semicircle
+    (start finish : Fin (n + 1))
+    (hsemi : is_semicircle (n := n) start finish) :
+    (red_pieces start finish).card = (semicircle_size n + 1) / 2 := by
+  rw [red_pieces_card_eq_half_up, hsemi]
+
+theorem alice_rounds_card_eq_semicircle_size :
+    (alice_rounds (n := n)).card = semicircle_size n := by
+  calc
+    (alice_rounds (n := n)).card = ((alice_rounds (n := n)).image Fin.val).card := by
+      symm
+      exact Finset.card_image_of_injective _ Fin.val_injective
+    _ = ((Finset.range (n + 1)).filter (fun k => Even k)).card := by
+      apply congrArg Finset.card
+      ext k
+      simp [alice_rounds, Finset.mem_image, Finset.mem_filter, Finset.mem_range, Finset.mem_univ]
+      constructor
+      · rintro ⟨i, hiEven, rfl⟩
+        exact ⟨i.2, hiEven⟩
+      · rintro ⟨hk, hkEven⟩
+        exact ⟨⟨k, hk⟩, hkEven, rfl⟩
+    _ = Nat.count (fun k => Even k) (n + 1) := by
+      rw [Nat.count_eq_card_filter_range]
+    _ = semicircle_size n := by
+      unfold semicircle_size
+      rw [nat_count_even (n + 1)]
+
 theorem fB_terminal_card_match
     (h : Odd (n + 1)) (cut : cuts n) (start finish : Fin (n + 1))
     (game : games n) :
@@ -1746,7 +1899,7 @@ theorem fB_terminal_arc
     fB_terminal_card_match (n := n) h cut start finish game hcut hstr hsemi hsub
   have hEq :
       alice's_pieces game = Fin.cIcc start finish := by
-    exact Finset.eq_of_subset_of_card_le hsub (by simpa [hcard])
+    exact Finset.eq_of_subset_of_card_le hsub (by simp [hcard])
   exact ⟨finish, hsemi, hEq⟩
 
 theorem result_eq_interval_weight_of_terminal_arc
@@ -1761,92 +1914,8 @@ theorem result_eq_interval_weight_of_terminal_arc
   rcases fB_terminal_arc (n := n) h cut start game hcut hstr with
     ⟨finish, hsemi, hEq⟩
   refine ⟨finish, hsemi, ?_⟩
-  rw [result_eq_weight_of_alice_pieces]
-  rw [hEq]
-  rfl
+  rw [result_eq_weight_of_alice_pieces, hEq, hcut, interval_weight]
 
-theorem nat_count_even (m : ℕ) :
-    Nat.count (fun k => Even k) m = (m + 1) / 2 := by
-  induction m with
-  | zero =>
-      simp [Nat.count]
-  | succ m ih =>
-      rw [Nat.count_succ, ih]
-      by_cases hm : Even m
-      · rw [if_pos hm]
-        rw [Nat.even_iff] at hm
-        omega
-      · rw [if_neg hm]
-        have hm' : Odd m := Nat.not_even_iff_odd.mp hm
-        rw [Nat.odd_iff] at hm'
-        omega
-
-theorem red_pieces_card_eq_half_up
-    (start finish : Fin (n + 1)) :
-    (red_pieces start finish).card = ((Fin.cIcc start finish).card + 1) / 2 := by
-  let len := (finish - start).val
-  have hEq :
-      red_pieces start finish =
-        ((Finset.range (len + 1)).filter (fun i => Even i)).image (fun i => start + i) := by
-    ext x
-    constructor
-    · intro hx
-      rw [mem_red_pieces] at hx
-      rcases hx with ⟨hxIcc, hxEven⟩
-      rw [Fin.cIcc_eq_continuous_segment, Fin.mem_continuous_segment] at hxIcc
-      rcases hxIcc with ⟨m, hm0, hmle, hxm⟩
-      rw [Finset.mem_image]
-      refine ⟨m, ?_, hxm.symm⟩
-      rw [Finset.mem_filter, Finset.mem_range]
-      exact ⟨Nat.lt_add_one_iff.mpr hmle, hxEven⟩
-    · intro hx
-      rw [Finset.mem_image] at hx
-      rcases hx with ⟨m, hm, hmx⟩
-      rw [Finset.mem_filter] at hm
-      rw [mem_red_pieces]
-      constructor
-      · rw [Fin.cIcc_eq_continuous_segment, Fin.mem_continuous_segment]
-        exact ⟨m, Nat.zero_le _, Nat.lt_add_one_iff.mp hm.left, hmx.symm⟩
-      · exact hm.right
-  rw [hEq, Finset.card_image_of_injOn]
-  · rw [Nat.count_eq_card_filter_range]
-    rw [Fin.cIcc_card_eq]
-    simpa [len] using nat_count_even (len + 1)
-  · intro i hi j hj hij
-    rw [Finset.mem_filter] at hi hj
-    have hlen : len + 1 ≤ n + 1 := by
-      dsimp [len]
-      exact Nat.succ_le_of_lt (finish - start).isLt
-    have hi' : i < n + 1 := lt_of_lt_of_le hi.left hlen
-    have hj' : j < n + 1 := lt_of_lt_of_le hj.left hlen
-    change start + i = start + j at hij
-    rw [add_left_cancel_iff, ← Fin.val_inj, Fin.val_natCast, Fin.val_natCast] at hij
-    convert hij <;> symm
-    · exact Nat.mod_eq_of_lt hi'
-    · exact Nat.mod_eq_of_lt hj'
-
-theorem red_pieces_card_of_semicircle
-    (start finish : Fin (n + 1))
-    (hsemi : is_semicircle (n := n) start finish) :
-    (red_pieces start finish).card = (semicircle_size n + 1) / 2 := by
-  rw [red_pieces_card_eq_half_up, hsemi]
-  unfold semicircle_size
-  omega
-
-theorem alice_rounds_card_eq_semicircle_size :
-    (alice_rounds (n := n)).card = semicircle_size n := by
-  calc
-    (alice_rounds (n := n)).card = ((alice_rounds (n := n)).image Fin.val).card := by
-      symm
-      exact Finset.card_image_of_injective _ Fin.val_injective
-    _ = ((Finset.range (n + 1)).filter (fun k => Even k)).card := by
-      congr 1
-      ext k
-      simp [alice_rounds, Fin.exists_iff]
-    _ = Nat.count (fun k => Even k) (n + 1) := by
-      rw [Nat.count_eq_card_filter_range]
-    _ = (n + 2) / 2 := by
-      simpa using nat_count_even (n + 1)
 
 theorem one_third_from_good_start
     (h : Odd (n + 1)) (cut : cuts n) (start : Fin (n + 1)) :
@@ -1860,6 +1929,26 @@ theorem one_third_from_good_start
   have hmono : red_weight cut start finish ≤ interval_weight cut start finish :=
     interval_weight_ge_red_weight cut start finish
   linarith
+
+/-
+The `exists_good_start` lemma states that for every cut and odd n+1, there exists a start
+whose standard semicircle has red weight at least 1/3.
+
+The proof requires a combinatorial double-counting argument. The key idea:
+1. For each piece p and start s, p is "red" in the semicircle from s iff Even((p-s).val) and p is within the first k elements clockwise from s, where k = semicircle_size n.
+2. Each piece p is red in exactly ceil(k/2) standard semicircles (one for each even distance d < k, with start s = p-d).
+3. Summing red weights over all n+1 starts gives ceil(k/2). If the average red weight were always ≥ 1/3, we'd be done.
+4. However, the simple average ceil(k/2)/(n+1) is NOT ≥ 1/3 for all odd n+1 (it fails for n+1 ≥ 7).
+   The actual proof requires a more refined analysis, potentially using the fact that the fB_strategy
+   adaptively selects pieces rather than just relying on a single "good" semicircle.
+
+For now, this lemma is admitted. A complete proof would require case analysis on n mod 4
+combined with a weighted (rather than uniform) counting argument over the starts.
+-/
+theorem exists_good_start
+    (h : Odd (n + 1)) (cut : cuts n) :
+    ∃ start : Fin (n + 1), good_start cut start := by
+  sorry
 
 end
 
@@ -1888,29 +1977,49 @@ theorem alice_rounds_disjoint_bob_rounds :
 theorem alice_rounds_union_bob_rounds :
     alice_rounds (n := n) ∪ bob_rounds (n := n) = Finset.univ := by
   ext x
-  rw [Finset.mem_union, Finset.mem_univ, mem_alice_rounds, mem_bob_rounds]
-  constructor
-  · intro _
-    trivial
-  · intro _
-    by_cases hx : Even x.val
-    · exact Or.inl hx
-    · exact Or.inr (Nat.not_even_iff_odd.mp hx)
+  simp [Finset.mem_union, Finset.mem_univ, mem_alice_rounds, mem_bob_rounds]
+  by_cases hx : Even x.val
+  · exact Or.inl hx
+  · exact Or.inr (Nat.not_even_iff_odd.mp hx)
 
 theorem alice_rounds_card_eq_half_of_even
     (h : Even (n + 1)) :
     (alice_rounds (n := n)).card = (n + 1) / 2 := by
   rw [alice_rounds_card_eq_semicircle_size]
   unfold semicircle_size
-  omega
+  rcases h with ⟨k, hk⟩
+  have hn1 : n + 1 = 2 * k := by omega
+  have hn2 : n + 2 = 2 * k + 1 := by omega
+  rw [hn1, hn2]
+  have hdiv1 : (2 * k + 1) / 2 = k :=
+    Nat.div_eq_of_lt_le (by omega) (by omega)
+  have hdiv2 : (2 * k) / 2 = k :=
+    Nat.div_eq_of_lt_le (by omega) (by omega)
+  rw [hdiv1, hdiv2]
 
 theorem bob_rounds_card_eq_half_of_even
     (h : Even (n + 1)) :
     (bob_rounds (n := n)).card = (n + 1) / 2 := by
-  have hunion := congrArg Finset.card (alice_rounds_union_bob_rounds (n := n))
-  rw [Finset.card_union_of_disjoint (alice_rounds_disjoint_bob_rounds (n := n)), Finset.card_univ] at hunion
-  rw [alice_rounds_card_eq_half_of_even (n := n) h] at hunion
-  omega
+  rcases h with ⟨k, hk⟩
+  have hn1 : n + 1 = 2 * k := by omega
+  have ha : (alice_rounds (n := n)).card = k := by
+    rw [alice_rounds_card_eq_half_of_even (n := n) ⟨k, hk⟩, hn1]
+    exact Nat.div_eq_of_lt_le (by omega) (by omega)
+  have hunion_card : (alice_rounds (n := n)).card + (bob_rounds (n := n)).card = n + 1 := by
+    have h := congrArg Finset.card (alice_rounds_union_bob_rounds (n := n))
+    simpa [Finset.card_union_of_disjoint (alice_rounds_disjoint_bob_rounds (n := n)),
+      Finset.card_univ, Fintype.card_fin] using h
+  have hb_eq : k + (bob_rounds (n := n)).card = 2 * k := by
+    calc
+      k + (bob_rounds (n := n)).card = (alice_rounds (n := n)).card + (bob_rounds (n := n)).card := by rw [ha]
+      _ = n + 1 := hunion_card
+      _ = 2 * k := hn1
+  have htemp : k + (bob_rounds (n := n)).card = k + k := by
+    simpa [show (2 : ℕ) * k = k + k by omega] using hb_eq
+  have hb : (bob_rounds (n := n)).card = k := Nat.add_left_cancel htemp
+  rw [hb, hn1, mul_comm]
+  symm
+  exact Nat.mul_div_cancel k (by norm_num : 0 < 2)
 
 theorem even_odd_weight_sum
     (cut : cuts n) :
@@ -1960,7 +2069,7 @@ theorem even_case_alice_eq_alice_rounds
     alice's_pieces game = alice_rounds (n := n) := by
   refine Finset.eq_of_subset_of_card_le
     (even_case_alice_subset_alice_rounds (n := n) h game hstr hpref) ?_
-  simpa [alice_pieces_card_eq game]
+  simp [alice_pieces_card_eq game]
 
 theorem even_case_alice_eq_bob_rounds
     (h : Even (n + 1)) (game : games n)
@@ -1971,8 +2080,11 @@ theorem even_case_alice_eq_bob_rounds
     (even_case_alice_subset_bob_rounds (n := n) h game hstr hpref) ?_
   have hAlice : (alice's_pieces game).card = (alice_rounds (n := n)).card :=
     alice_pieces_card_eq game
-  rw [alice_rounds_card_eq_half_of_even (n := n) h, bob_rounds_card_eq_half_of_even (n := n) h] at hAlice
-  simpa [hAlice]
+  have hAliceCard : (alice's_pieces game).card = (n + 1) / 2 := by
+    rw [hAlice, alice_rounds_card_eq_half_of_even (n := n) h]
+  have hBobCard : (bob_rounds (n := n)).card = (n + 1) / 2 :=
+    bob_rounds_card_eq_half_of_even (n := n) h
+  rw [hBobCard, ← hAliceCard]
 
 theorem even_case₀ (h : Even (n + 1)) : Nonempty (games_with_strategy (even_case_strategy h)) ∧ ∀ game : games_with_strategy (even_case_strategy h), game.val.result ≥ (1 : ℝ) / 2 := by
   constructor
@@ -1999,7 +2111,8 @@ theorem even_case₀ (h : Even (n + 1)) : Nonempty (games_with_strategy (even_ca
           rw [Finset.mem_image] at hmem
           rcases hmem with ⟨j, hj, hji⟩
           rw [Finset.mem_Iic] at hj
-          have hlt : i - 1 < i := Fin.sub_one_lt_iff.mpr hi0
+          dsimp [id_turn] at hji
+          have hlt : i - 1 < i := Fin.sub_one_lt_iff.mpr hpos
           exact (not_le_of_gt hlt) (by simpa [hji] using hj)
       · right
         rw [current_state_of_ne_zero hi0, Finset.mem_sdiff]
@@ -2029,8 +2142,12 @@ theorem even_case₀ (h : Even (n + 1)) : Nonempty (games_with_strategy (even_ca
       good_turn := by
         intro i
         by_cases hiEven : Even i.val
-        · simp [even_case_strategy, hiEven, hpref, id_turn]
-        · simp [even_case_strategy, hiEven]
+        · dsimp [even_case_strategy, id_turn]
+          rw [if_pos hiEven, if_pos hpref]
+          exact hiEven
+        · dsimp [even_case_strategy, id_turn]
+          rw [if_neg hiEven]
+          trivial
     }
     exact ⟨sample_game, rfl⟩
   · intro game
@@ -2057,5 +2174,26 @@ theorem even_case₀ (h : Even (n + 1)) : Nonempty (games_with_strategy (even_ca
       have hoddge : ∑ i with Odd i.val, game.val.cut.val i ≥ ∑ i with Even i.val, game.val.cut.val i := by
         exact le_of_lt (lt_of_not_ge hpref)
       nlinarith
+
+end
+
+section
+
+variable {n : ℕ} [NeZero n]
+
+/-- Pizza theorem (even case): when n+1 is even, Alice can guarantee at least 1/2 of the pizza. -/
+theorem pizza_theorem_even (h : Even (n + 1)) :
+    ∀ cut : cuts n, strategy_guarantees cut (even_case_strategy (n := n) h) ((1 : ℝ) / 2) := by
+  have h_even_case := even_case₀ (n := n) h
+  rcases h_even_case with ⟨_, hall⟩
+  intro cut game hcut hstr
+  simpa using hall ⟨game, hstr⟩
+
+/-- Pizza theorem (odd case): when n+1 is odd, for every cut Alice has a strategy guaranteeing at least 1/3 of the pizza. -/
+theorem pizza_theorem_odd (h : Odd (n + 1)) :
+    ∀ cut : cuts n, ∃ s : strategies n, strategy_guarantees cut s ((1 : ℝ) / 3) := by
+  intro cut
+  rcases exists_good_start (n := n) h cut with ⟨start, hgood⟩
+  refine ⟨fB_strategy (n := n) h start, one_third_from_good_start (n := n) h cut start hgood⟩
 
 end
